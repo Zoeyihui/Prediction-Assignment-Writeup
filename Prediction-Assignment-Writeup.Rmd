@@ -1,0 +1,52 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Zuo Yihui"
+date: "Sunday, May 15, 2016"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+#This docment to predict the manner in which people did the exercise
+##1 load data and make preprocessing
+```{r}
+###set the directory to files with pml data
+setwd("E:/machine learning")
+###read training and testing data
+training<-read.csv("pml-training.csv")
+testing<-read.csv("pml-testing.csv")
+
+### preprocessing the raw data(get rid of items with too much NA or those are some irrelevant)
+Ntest<-testing[mapply(function(x) sum(is.na(x))<=(length(x)/3),testing[,c(1:160)])]
+#reduce the parameters in training set to the parameters that are included in testing set 
+Ntrain<-training[,c(names(Ntest)[-dim(Ntest)[2]],"classe")]
+# remove irrelevant items 
+Ntest<-Ntest[,-c(1:5)]
+Ntrain<-Ntrain[,-c(1:5)]
+```
+##2 build prediction model 
+###to improve recognition performance we used an ensemble of classifiers using the Bagging method and to estimate the accuracy in a valid way, use out=of-bag("oob") method in trControl.
+```{r}
+library(AppliedPredictiveModeling)
+library(caret)
+set.seed(825)
+#build model with bagging and cross validation
+modfit<-train(classe~.,data=Ntrain,mehtod=c("rf"),trControl=trainControl(method="oob",number=10),
+               bagControl=bagControl(fit=ctreeBag$fit,predict=ctreeBag$pred,aggregate=ctreeBag$aggregate))
+```
+
+##3 the accurarcy of the final model 
+```{r}
+modfit$finalModel
+```
+
+##4 make the prediction for testing data
+###apply the model to  predict 20 different test cases with level of participatants' exercise 
+```{r}
+predict(modfit,Ntest)
+```
+
+According to the accuracy matrix and the OOB estimate of erro rate 0.14%, we can conclud that this predction model must work preform very well in predicting the exercise behaviors in testing data. 
+Because the out of bag error rate is formed by applying the random forest model to the data which are not inclueded in the bagging data, that can be regarded as the out of sample error rate. The number of trees is 500, enough number of model trees to contain every variables in buiding the model.  
