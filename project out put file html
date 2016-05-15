@@ -1,0 +1,68 @@
+
+file:///E:/machine%20learning/project/Prediction_Assignment_Writeup.html
+##sorry I meet some problem when I tried to upload the compiled html files or PDF files I am araind only word text are availabe
+Prediction Assignment Writeup
+Zuo Yihui
+Monday, May 16, 2016
+This docment to predict the manner in which people did the exercise
+1 load data and make preprocessing
+###set the directory to files with pml data
+setwd("E:/machine learning")
+###read training and testing data
+training<-read.csv("pml-training.csv")
+testing<-read.csv("pml-testing.csv")
+
+### preprocessing the raw data(get rid of items with too much NA or those are some irrelevant)
+Ntest<-testing[mapply(function(x) sum(is.na(x))<=(length(x)/3),testing[,c(1:160)])]
+#reduce the parameters in training set to the parameters that are included in testing set 
+Ntrain<-training[,c(names(Ntest)[-dim(Ntest)[2]],"classe")]
+# remove irrelevant items 
+Ntest<-Ntest[,-c(1:5)]
+Ntrain<-Ntrain[,-c(1:5)]
+2 build prediction model
+to improve recognition performance we used an ensemble of classifiers using the Bagging method and to estimate the accuracy in a valid way, use out=of-bag("oob") method in trControl.
+library(AppliedPredictiveModeling)
+## Warning: package 'AppliedPredictiveModeling' was built under R version
+## 3.1.3
+library(caret)
+## Warning: package 'caret' was built under R version 3.1.3
+## Loading required package: lattice
+## Loading required package: ggplot2
+## Warning: package 'ggplot2' was built under R version 3.1.3
+set.seed(825)
+#build model with bagging and cross validation
+modfit<-train(classe~.,data=Ntrain,mehtod=c("rf"),trControl=trainControl(method="oob",number=10),
+               bagControl=bagControl(fit=ctreeBag$fit,predict=ctreeBag$pred,aggregate=ctreeBag$aggregate))
+## Loading required package: randomForest
+## Warning: package 'randomForest' was built under R version 3.1.3
+## randomForest 4.6-12
+## Type rfNews() to see new features/changes/bug fixes.
+## 
+## Attaching package: 'randomForest'
+## 
+## The following object is masked from 'package:ggplot2':
+## 
+##     margin
+3 the accurarcy of the final model
+modfit$finalModel
+## 
+## Call:
+##  randomForest(x = x, y = y, mtry = param$mtry, mehtod = ..1, bagControl = ..2) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 28
+## 
+##         OOB estimate of  error rate: 0.14%
+## Confusion matrix:
+##      A    B    C    D    E  class.error
+## A 5578    1    0    0    1 0.0003584229
+## B    5 3789    2    1    0 0.0021069265
+## C    0    5 3417    0    0 0.0014611338
+## D    0    0    8 3207    1 0.0027985075
+## E    0    0    0    3 3604 0.0008317161
+4 make the prediction for testing data
+apply the model to predict 20 different test cases with level of participatants' exercise
+predict(modfit,Ntest)
+##  [1] B A B A A E D B A A B C B A E E A B B B
+## Levels: A B C D E
+According to the accuracy matrix and the OOB estimate of erro rate 0.14%, we can conclud that this predction model must work preform very well in predicting the exercise behaviors in testing data. Because the out of bag error rate is formed by applying the random forest model to the data which are not inclueded in the bagging data, that can be regarded as the out of sample error rate. The number of trees is 500, enough number of model trees to contain every variables in buiding the model.
